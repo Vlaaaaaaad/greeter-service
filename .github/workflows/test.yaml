@@ -1,0 +1,48 @@
+name: Test
+
+on:
+  push:
+    paths:
+      - '.github/workflows/**'
+      - '**.py'
+      - Pipfile
+      - Dockerfile
+
+jobs:
+  App:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@master
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python 3.7
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.7
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pipenv
+          pipenv install --dev
+
+      - name: Run tests
+        run: |
+          PYTHONPATH=. pipenv run tests
+
+  Dockerfile:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+
+      - name: Run hadolint
+        uses: reviewdog/action-hadolint@master
+        with:
+          github_token: ${{ secrets.github_token }}
+          reporter: github-pr-review

@@ -1,0 +1,17 @@
+image: gitpod/workspace-full
+
+ports:
+  - port: 5002
+    onOpen: open-preview
+
+tasks:
+  - init: >
+      cp .env.example .env;
+      pipenv shell;
+      pipenv install --dev;
+    command: >
+      pipenv shell;
+      pipenv run start
+
+  - command: python3 gitpod.py
+    openMode: split-right

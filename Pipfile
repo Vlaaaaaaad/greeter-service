@@ -1,0 +1,21 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[packages]
+flask = "*"
+gunicorn = "*"
+# honeycomb-beeline = "*"
+# sentry-sdk = "*"
+
+[dev-packages]
+pytest = "*"
+pytest-flask = "*"
+
+[requires]
+python_version = "3.7"
+
+[scripts]
+tests = "pytest"
+start = "flask run -p 5002 -h 0.0.0.0"
