@@ -14,7 +14,7 @@ def make_app():
 
     @app.route('/')
     def index():
-        return 'Hello world!'
+        return 'Hello'
 
     return app
 

@@ -21,4 +21,4 @@ def test_index_response(client):
     """Test homepage."""
     res = client.get(url_for('index'))
     assert res.status_code == HTTP_OK
-    assert res.data == b'Hello world!'
+    assert res.data == b'Hello'
