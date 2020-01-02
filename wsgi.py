@@ -1,3 +1,3 @@
-from greeter import make_app
+from greeter.app import make_app
 
 app = make_app()

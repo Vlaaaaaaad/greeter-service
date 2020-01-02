@@ -6,11 +6,9 @@ ports:
 
 tasks:
   - init: >
-      cp .env.example .env;
-      pipenv shell;
-      pipenv install --dev;
+      cp .env.example .env && 
+      pipenv install --dev
     command: >
-      pipenv shell;
       pipenv run start
 
   - command: python3 gitpod.py

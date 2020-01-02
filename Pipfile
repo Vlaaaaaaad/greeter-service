@@ -8,10 +8,12 @@ flask = "*"
 gunicorn = "*"
 # honeycomb-beeline = "*"
 # sentry-sdk = "*"
+python-dotenv = "*"
 
 [dev-packages]
 pytest = "*"
 pytest-flask = "*"
+wemake-python-styleguide = "*"
 
 [requires]
 python_version = "3.7"

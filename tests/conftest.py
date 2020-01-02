@@ -1,7 +1,5 @@
-#!/usr/bin/env python
-
 import pytest
-from greeter import make_app
+from greeter.app import make_app
 
 
 @pytest.fixture
