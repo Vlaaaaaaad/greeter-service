@@ -616,11 +616,11 @@
         },
         "wemake-python-styleguide": {
             "hashes": [
-                "sha256:4705b9f963053628ed6800a922622f9b0491a9e23986707b612f033009e48c7c",
-                "sha256:dc7bff88777e9183c636e07da6b99ee36383a8c10e3968be82f61f25f1627e0c"
+                "sha256:927236eef999ef4a67ec6e120586da7d9e33f99568775d6ed28c3c6670872264",
+                "sha256:b005b29ba07eba59c5d8d781df35975adcf1febcad7f1306abe9bf07fa11f1d0"
             ],
             "index": "pypi",
-            "version": "==0.13.3"
+            "version": "==0.13.4"
         },
         "werkzeug": {
             "hashes": [
