@@ -6,6 +6,7 @@ on:
       - '.github/workflows/**'
       - '**.py'
       - Pipfile
+      - Pipfile.lock
       - .dockerignore
       - Dockerfile
 
