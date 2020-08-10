@@ -1,4 +1,4 @@
 {
-   "python.pythonPath": ".venv/bin/python3.7",
+   "python.pythonPath": "/bin/python3",
    "python.linting.enabled": false
 }
