@@ -7,7 +7,7 @@ HTTP_OK = 200
 
 def make_app():
     app = Flask(__name__)
-    app.VERSION = os.getenv('BUILD_ID', 'dev') 
+    app.VERSION = os.getenv('VERSION', 'dev')
 
     @app.route('/status/alive', methods=['GET'])
     def alive():

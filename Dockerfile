@@ -4,7 +4,7 @@ ARG VENDOR
 ARG BUILD_DATE
 ARG GIT_REPO
 ARG VCS_REF
-ARG VERSION
+ARG VERSION=dev
 ARG TITLE="greeter-service"
 ARG DESCRIPTION="PoC that returns a greeting like 'Hello' for 'Hello world'"
 ARG DOCUMENTATION
