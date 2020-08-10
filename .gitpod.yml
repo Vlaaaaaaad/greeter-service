@@ -11,5 +11,5 @@ tasks:
     command: >
       pipenv run start
 
-  - command: python3 gitpod.py
+  - command: python3 assets/gitpod.py
     openMode: split-right

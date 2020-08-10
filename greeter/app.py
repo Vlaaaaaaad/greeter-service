@@ -1,11 +1,13 @@
-from flask import Flask
+import os
 import json
+from flask import Flask
 
 HTTP_OK = 200
 
 
 def make_app():
     app = Flask(__name__)
+    app.VERSION = os.getenv('VERSION', 'dev')
 
     @app.route('/status/alive', methods=['GET'])
     def alive():
@@ -46,6 +48,7 @@ def make_app():
     @app.after_request
     def after_request_func(response):
         response.headers['X-Reply-Service'] = 'greeter-service'
+        response.headers['X-Version'] = app.VERSION
         return response
 
     return app

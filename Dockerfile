@@ -1,10 +1,10 @@
-FROM python:3.7
+FROM python:3.8
 
 ARG VENDOR
 ARG BUILD_DATE
 ARG GIT_REPO
 ARG VCS_REF
-ARG VERSION
+ARG VERSION=dev
 ARG TITLE="greeter-service"
 ARG DESCRIPTION="PoC that returns a greeting like 'Hello' for 'Hello world'"
 ARG DOCUMENTATION
@@ -35,4 +35,4 @@ COPY . .
 
 EXPOSE 5002
 
-CMD [ "gunicorn", "-b0.0.0.0:5002", "wsgi:app" ]
+CMD [ "gunicorn", "-b0.0.0.0:5002", "app:app" ]

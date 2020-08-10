@@ -6,8 +6,6 @@ verify_ssl = true
 [packages]
 flask = "*"
 gunicorn = "*"
-# honeycomb-beeline = "*"
-# sentry-sdk = "*"
 python-dotenv = "*"
 
 [dev-packages]
@@ -16,7 +14,7 @@ pytest-flask = "*"
 wemake-python-styleguide = "*"
 
 [requires]
-python_version = "3.7"
+python_version = "3.8"
 
 [scripts]
 tests = "pytest"

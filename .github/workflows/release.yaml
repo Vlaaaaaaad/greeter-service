@@ -1,0 +1,268 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  Release:
+    name: GitHub Release
+    runs-on: ubuntu-latest
+    if: >
+      !contains(github.event.head_commit.message, '🚀') &&
+      !contains(github.event.pull_request.title, '🚀')
+
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v2
+        # with:
+        #   token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+      - name: Set env vars
+        run: |
+          echo "::set-env name=USER::$( dirname $GITHUB_REPOSITORY | awk '{print tolower($0)}' )"
+          echo "::set-env name=REPO::$( basename $GITHUB_REPOSITORY | awk '{print tolower($0)}' )"
+
+      - name: Set up Ruby
+        uses: actions/setup-ruby@v1
+
+      - name: Install dependencies
+        run: gem install github_changelog_generator
+
+      - name: Bump semver
+        id: bumpr
+        if: "!startsWith(github.ref, 'refs/tags/')"
+        uses: haya14busa/action-bumpr@v1
+
+      - name: Get the release tag
+        id: tag
+        uses: haya14busa/action-cond@v1
+        with:
+          cond: "${{ startsWith(github.ref, 'refs/tags/') }}"
+          if_true: ${{ github.ref }}
+          if_false: ${{ steps.bumpr.outputs.next_version }}
+
+      - name: Create new release
+        uses: actions/create-release@v1
+        if: "steps.tag.outputs.value != ''"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.tag.outputs.value }}
+          release_name: Release ${{ steps.tag.outputs.value }}
+          body: ${{ steps.bumpr.outputs.message }}
+          draft: false
+          prerelease: false
+
+      - name: Update changelog
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        run: |
+          github_changelog_generator \
+            --token $TOKEN \
+            --user $USER \
+            --project $REPO \
+            --no-issues \
+            --pr-label 'Untagged Pull Requests:' \
+            --configure-sections \
+              '{
+                "breaking": {
+                  "prefix": "‼️ **Breaking changes**",
+                  "labels": ["kind/breaking"]
+                },
+                "improvements": {
+                  "prefix": "👌 **Improvements**",
+                  "labels": ["kind/enhancement"]
+                },
+                "bug": {
+                  "prefix": "🐛 **Bug fixes**",
+                  "labels": ["kind/bug"]
+                },
+                "dependency": {
+                  "prefix": "⬆️ **Dependency updates**",
+                  "labels": ["kind/dependency", "dependencies"]
+                }
+              }'
+
+      - name: Push file changes
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: 🚀 Release
+          # commit_user_name: Example
+          # commit_user_email: example@users.noreply.github.com
+          # commit_author: Example <example@users.noreply.github.com>
+          branch: master
+          push_options: '--force'
+
+      - name: Set env vars
+        if: steps.tag.outputs.value != ''
+        run: |
+          echo "::set-env name=USER::$( dirname $GITHUB_REPOSITORY | awk '{print tolower($0)}' )"
+          echo "::set-env name=REPO::$( basename $GITHUB_REPOSITORY | awk '{print tolower($0)}' )"
+          echo "::set-env name=URL::https://github.com/$( dirname $GITHUB_REPOSITORY | awk '{print tolower($0)}' )/$( basename $GITHUB_REPOSITORY | awk '{print tolower($0)}' )"
+
+      - name: Build
+        if: steps.tag.outputs.value != ''
+        env:
+          RELEASE_TAG: ${{ steps.tag.outputs.value }}
+        run: |
+          docker build . \
+            --tag greeter-service:latest \
+            --build-arg BUILD_DATE=$(date -u +"%Y-%m-%d") \
+            --build-arg VCS_REF=$GITHUB_SHA \
+            --build-arg VERSION=$RELEASE_TAG \
+            --build-arg VENDOR=$USER \
+            --build-arg AUTHOR=$USER \
+            --build-arg GIT_REPO=$URL \
+            --build-arg DOCUMENTATION=$URL
+
+      - name: Check for available repositories
+        id: push_options
+        if: steps.tag.outputs.value != ''
+        env:
+          DUMMY: "value"
+          # Uncomment to enable pushing
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Set the relevant credentials and uncomment to enable pushing
+          # DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          # DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
+          # AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          # AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          # AWS_ECR_REPO_NAME: ${{ secrets.AWS_ECR_REPO_NAME }}
+        run: |
+          if [[ -z "${GITHUB_TOKEN}" ]]; then
+            echo "Missing GitHub Package Registry credentials, skipping."
+
+            echo "::set-output name=push_to_github_package_registry::false"
+          else
+            echo "Found GitHub GitHub Package Registry credentials, will try to push the image."
+
+            echo "::set-output name=push_to_github_package_registry::true"
+          fi
+
+          if [[ -z "${DOCKERHUB_USERNAME}" || -z "${DOCKERHUB_PASSWORD}" ]]; then
+            echo "Missing DockerHub credentials, skipping."
+
+            echo "::set-output name=push_to_dockerhub::false"
+          else
+            echo "Found DockerHub credentials, will try to push the image."
+
+            echo "::set-output name=push_to_dockerhub::true"
+          fi
+
+          if [[ -z "${AWS_ACCESS_KEY_ID}" || -z "${AWS_SECRET_ACCESS_KEY}" || -z "${AWS_ECR_REPO_NAME}" ]]; then
+            echo "Missing AWS credentials, skipping."
+
+            echo "::set-output name=push_to_aws_ecr::false"
+          else
+            echo "Found AWS credentials, will try to push the image."
+
+            echo "::set-output name=push_to_aws_ecr::true"
+          fi
+
+      - name: Login to GitHub Package Repository
+        if: >
+          steps.push_options.outputs.push_to_github_package_registry == 'true'
+            &&
+          steps.tag.outputs.value != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          docker login docker.pkg.github.com --username $USER --password $GH_TOKEN
+
+      - name: Tag and push release tag to GitHub Package Repository
+        if: >
+          steps.push_options.outputs.push_to_github_package_registry == 'true'
+            &&
+          steps.tag.outputs.value != ''
+        env:
+          RELEASE_TAG: ${{ steps.tag.outputs.value }}
+        run: |
+          docker tag greeter-service:latest docker.pkg.github.com/$USER/$REPO/greeter-service:$RELEASE_TAG
+          docker push docker.pkg.github.com/$USER/$REPO/greeter-service:$RELEASE_TAG
+
+      - name: Tag and push latest tag to GitHub Package Repository
+        if: >
+          steps.push_options.outputs.push_to_github_package_registry == 'true'
+            &&
+          steps.tag.outputs.value != ''
+        run: |
+          docker tag greeter-service:latest docker.pkg.github.com/$USER/$REPO/greeter-service:latest
+          docker push docker.pkg.github.com/$USER/$REPO/greeter-service:latest
+
+      - name: Login to Dockerhub
+        if: >
+          steps.push_options.outputs.push_to_dockerhub == 'true'
+          &&
+          steps.tag.outputs.value != ''
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
+        run: |
+          echo $DOCKERHUB_PASSWORD | docker login --username $DOCKERHUB_USERNAME --password-stdin
+
+      - name:  Tag and push release tag to DockerHub
+        if: >
+          steps.push_options.outputs.push_to_dockerhub == 'true'
+          &&
+          steps.tag.outputs.value != ''
+        env:
+          RELEASE_TAG: ${{ steps.tag.outputs.value }}
+        run: |
+          docker tag greeter-service:latest $USER/$REPO:$RELEASE_TAG
+          docker push $USER/$REPO:$RELEASE_TAG
+
+      - name:  Tag and push latest tag to DockerHub
+        if: >
+          steps.push_options.outputs.push_to_dockerhub == 'true'
+          &&
+          steps.tag.outputs.value != ''
+        run: |
+          docker tag greeter-service:latest $USER/$REPO:latest
+          docker push $USER/$REPO:latest
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        if: >
+          steps.push_options.outputs.push_to_aws_ecr == 'true'
+          &&
+          steps.tag.outputs.value != ''
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login to ECR
+        id: login-ecr
+        if: >
+          steps.push_options.outputs.push_to_aws_ecr == 'true'
+            &&
+          steps.tag.outputs.value != ''
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Tag and push release tag to ECR
+        if: >
+          steps.push_options.outputs.push_to_aws_ecr == 'true'
+          &&
+          steps.tag.outputs.value != ''
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.AWS_ECR_REPO_NAME }}
+          RELEASE_TAG: ${{ steps.tag.outputs.value }}
+        run: |
+          docker tag greeter-service:latest $ECR_REGISTRY/$ECR_REPOSITORY:$RELEASE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$RELEASE_TAG
+
+      - name: Tag and push latest tag to ECR
+        if: >
+          steps.push_options.outputs.push_to_aws_ecr == 'true'
+          &&
+          steps.tag.outputs.value != ''
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.AWS_ECR_REPO_NAME }}
+        run: |
+          docker tag greeter-service:latest $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
